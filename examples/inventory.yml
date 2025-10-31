@@ -1,95 +1,133 @@
 ---
-# Example Inventory for SSH Hardening Role
+# Example Inventory for Kernel Configuration Role
 
 all:
   children:
-    # Basic servers with standard SSH hardening
-    basic_servers:
+    # Web servers with network optimization
+    web_servers:
       hosts:
         web-01:
           ansible_host: 192.168.1.10
         web-02:
           ansible_host: 192.168.1.11
+        lb-01:
+          ansible_host: 192.168.1.15
+      vars:
+        # Network performance tuning
+        kernel_parameters_common:
+          net.core.rmem_max: 134217728
+          net.core.wmem_max: 134217728
+          net.ipv4.tcp_rmem: "4096 65536 134217728"
+          net.ipv4.tcp_wmem: "4096 65536 134217728"
+          net.core.netdev_max_backlog: 5000
+        # Load network modules
+        kernel_modules_load:
+          - 8021q
+          - bonding
+        kernel_modules_options:
+          bonding:
+            mode: active-backup
+            miimon: 100
+
+    # Database servers with memory optimization
+    database_servers:
+      hosts:
         db-01:
           ansible_host: 192.168.1.20
-
-    # Production servers with advanced security
-    production_servers:
-      hosts:
-        prod-web-01:
-          ansible_host: 10.0.1.10
-        prod-web-02:
-          ansible_host: 10.0.1.11
-        prod-db-01:
-          ansible_host: 10.0.1.20
-        prod-app-01:
-          ansible_host: 10.0.1.30
+        db-02:
+          ansible_host: 192.168.1.21
       vars:
-        # Production-specific SSH settings
-        ssh_port: 2222
-        ssh_max_auth_tries: 2
-        ssh_allow_groups:
-          - production-users
+        # Memory and I/O tuning for databases
+        kernel_parameters_common:
+          vm.swappiness: 1
+          vm.dirty_ratio: 15
+          vm.dirty_background_ratio: 5
+          kernel.shmmax: 68719476736
+          kernel.shmall: 4294967296
+        # Disable unnecessary modules
+        kernel_modules_blacklist:
+          - bluetooth
+          - pcspkr
 
-    # High security servers (DMZ, critical systems)
+    # Container hosts with container-specific settings
+    container_hosts:
+      hosts:
+        docker-01:
+          ansible_host: 192.168.1.30
+        k8s-node-01:
+          ansible_host: 192.168.1.31
+        k8s-node-02:
+          ansible_host: 192.168.1.32
+      vars:
+        # Container runtime optimizations
+        kernel_parameters_common:
+          net.bridge.bridge-nf-call-iptables: 1
+          net.bridge.bridge-nf-call-ip6tables: 1
+          net.ipv4.ip_forward: 1
+          fs.inotify.max_user_watches: 524288
+        # Load required modules for containers
+        kernel_modules_load:
+          - br_netfilter
+          - overlay
+          - ip_vs
+          - ip_vs_rr
+
+    # High-performance computing nodes
+    hpc_nodes:
+      hosts:
+        compute-01:
+          ansible_host: 10.0.1.10
+        compute-02:
+          ansible_host: 10.0.1.11
+        gpu-node-01:
+          ansible_host: 10.0.1.20
+      vars:
+        # HPC-specific kernel tuning
+        kernel_parameters_common:
+          kernel.numa_balancing: 0
+          vm.zone_reclaim_mode: 1
+          net.core.busy_read: 50
+          net.core.busy_poll: 50
+        # Load performance modules
+        kernel_modules_load:
+          - msr
+          - cpuid
+        # Blacklist power management that can affect performance
+        kernel_modules_blacklist:
+          - intel_powerclamp
+          - processor_thermal_device
+
+    # Security-hardened servers
     secure_servers:
       hosts:
         dmz-web-01:
           ansible_host: 203.0.113.10
-        critical-db-01:
+        bastion-01:
           ansible_host: 10.0.2.10
-        security-server-01:
-          ansible_host: 10.0.2.20
       vars:
-        # High security SSH settings
-        ssh_port: 2222
-        ssh_max_auth_tries: 1
-        ssh_max_sessions: 1
-        ssh_allow_users:
-          - admin
-          - security-officer
-
-    # Development servers (more permissive)
-    dev_servers:
-      hosts:
-        dev-web-01:
-          ansible_host: 192.168.100.10
-        dev-db-01:
-          ansible_host: 192.168.100.20
-        test-server-01:
-          ansible_host: 192.168.100.30
-      vars:
-        # Development-friendly SSH settings
-        ssh_x11_forwarding: "yes"
-        ssh_allow_tcp_forwarding: "yes"
-        ssh_max_auth_tries: 5
-        ssh_allow_groups:
-          - developers
-          - testers
-
-    # Compliance servers (CIS/NIST requirements)
-    compliance_servers:
-      hosts:
-        compliance-web-01:
-          ansible_host: 10.0.3.10
-        audit-server-01:
-          ansible_host: 10.0.3.20
-        finance-db-01:
-          ansible_host: 10.0.3.30
-      vars:
-        # Compliance-specific settings
-        ssh_log_level: VERBOSE
-        ssh_banner_enabled: true
-        ssh_authentication_methods:
-          - publickey
+        # Security-focused kernel parameters
+        kernel_parameters_common:
+          kernel.dmesg_restrict: 1
+          kernel.kptr_restrict: 2
+          kernel.yama.ptrace_scope: 1
+          net.ipv4.conf.all.log_martians: 1
+          net.ipv4.conf.all.send_redirects: 0
+          net.ipv4.conf.all.accept_redirects: 0
+        # Blacklist potentially risky modules
+        kernel_modules_blacklist:
+          - dccp
+          - sctp
+          - rds
+          - tipc
+          - usb-storage
 
   # Global variables for all hosts
   vars:
-    # Common SSH settings
+    # Common connection settings
     ansible_user: ansible
     ansible_ssh_private_key_file: ~/.ssh/ansible_key
 
-    # Common security baseline
-    ssh_permit_root_login: "no"
-    ssh_password_authentication: "no"
-    ssh_pubkey_authentication: "yes"
+    # Common kernel configuration
+    kernel_parameters_sysctl_file: /etc/sysctl.d/99-ansible-kernel.conf
+    kernel_parameters_sysctl_reload: true
+    kernel_modules_persistent: true
