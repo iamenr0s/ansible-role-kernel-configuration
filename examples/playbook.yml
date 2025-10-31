@@ -5,7 +5,7 @@
 - hosts: all
   become: true
   roles:
-    - role: ansible-role-kernel-configuration
+    - role: iamenr0s.ansible_role_kernel_configuration
       vars:
         kernel_parameters_common:
           net.ipv4.tcp_syncookies: 1
