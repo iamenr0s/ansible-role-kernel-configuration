@@ -52,3 +52,28 @@ kernel_parameters_major_map:
   Fedora:
     "39":
       vm.swappiness: 10
+
+# System paths used for kernel module persistence and configuration
+kernel_modules_load_conf_dir: "/etc/modules-load.d"
+kernel_modules_modprobe_conf_dir: "/etc/modprobe.d"
+
+# Kernel modules to load immediately and persist across reboots
+kernel_modules_load: []
+
+# Kernel modules to blacklist (prevent loading)
+kernel_modules_blacklist: []
+
+# Kernel module options, map of module -> { option: value }
+# Example:
+# kernel_modules_options:
+#   dummy:
+#     numdummies: 2
+kernel_modules_options: {}
+
+# Persist module loading via system configuration when loading modules
+# If true, module entries and options are written under /etc/modules-load.d and /etc/modprobe.d
+kernel_modules_persistent: true
+
+# Files used for persisting blacklist and standalone options (when not using modprobe persistent)
+kernel_modules_blacklist_file: "/etc/modprobe.d/blacklist-ansible-role-kernel.conf"
+kernel_modules_options_file: "/etc/modprobe.d/ansible-role-kernel-options.conf"

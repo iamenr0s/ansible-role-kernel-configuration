@@ -44,3 +44,29 @@
   loop: "{{ kernel_parameters_effective | dict2items }}"
   when: kernel_parameters_effective | length > 0
   notify: Reload sysctl
+
+# Kernel modules management
+
+- name: Load and persist kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+    params: "{{ (kernel_modules_options[item] | default({})) | items | map('join', '=') | join(' ') }}"
+    persistent: "{{ 'present' if kernel_modules_persistent else 'disabled' }}"
+  loop: "{{ kernel_modules_load }}"
+  when: kernel_modules_load | length > 0
+
+- name: Blacklist kernel modules
+  community.general.kernel_blacklist:
+    name: "{{ item }}"
+    state: present
+    blacklist_file: "{{ kernel_modules_blacklist_file }}"
+  loop: "{{ kernel_modules_blacklist }}"
+  when: kernel_modules_blacklist | length > 0
+
+- name: Unload blacklisted modules if currently loaded
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: absent
+  loop: "{{ kernel_modules_blacklist }}"
+  when: kernel_modules_blacklist | length > 0

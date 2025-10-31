@@ -17,3 +17,11 @@
           RedHat:
             "8":
               fs.file-max: 200000
+        kernel_modules_load:
+          - 8021q
+          - dummy
+        kernel_modules_options:
+          dummy:
+            numdummies: 2
+        kernel_modules_blacklist:
+          - nouveau

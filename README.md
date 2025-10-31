@@ -9,11 +9,12 @@ This role helps keep your Linux servers healthy and consistent by applying sensi
 - Applies kernel parameters using `sysctl` based on distro major version
 - Persists settings in `{{ kernel_parameters_sysctl_file }}` and optionally reloads
 - Clean defaults with per-platform overrides; easy to customize
+- Manages kernel modules: load/unload, persistent loading, blacklisting, and options
 
 ## Requirements
 
 - `ansible` >= 2.9
-- Collections: `ansible.posix`, `community.general`
+- Collections: `ansible.posix`, `community.general >= 7.0.0`
 
 ## Supported Platforms
 
@@ -48,6 +49,33 @@ kernel_parameters_major_map:
   RedHat:
     "8":
       fs.file-max: 200000
+
+### Kernel Modules
+
+- `kernel_modules_load`: List of module names to load immediately and persist.
+- `kernel_modules_blacklist`: List of module names to blacklist (prevent loading).
+- `kernel_modules_options`: Map of module -> options dict applied when loading.
+- `kernel_modules_persistent`: If true, persist module load and options across reboots.
+- `kernel_modules_blacklist_file`: Path to blacklist file for persistence.
+- `kernel_modules_options_file`: Path for standalone options when needed.
+
+Example:
+
+```yaml
+kernel_modules_load:
+  - 8021q
+  - dummy
+kernel_modules_options:
+  dummy:
+    numdummies: 2
+kernel_modules_blacklist:
+  - nouveau
+kernel_modules_persistent: true
+```
+
+Notes:
+- Options are applied when modules are loaded by this role.
+- Blacklisted modules are also unloaded if currently loaded.
 ```
 
 ## Dependencies
@@ -68,6 +96,14 @@ None.
           Debian:
             "12":
               vm.swappiness: 5
+        kernel_modules_load:
+          - 8021q
+          - dummy
+        kernel_modules_options:
+          dummy:
+            numdummies: 2
+        kernel_modules_blacklist:
+          - nouveau
 ```
 
 ## Testing
