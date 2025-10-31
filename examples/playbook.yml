@@ -1,0 +1,19 @@
+---
+# Example Playbook for kernel parameters role
+# Demonstrates configuring kernel parameters by major version
+
+- hosts: all
+  become: true
+  roles:
+    - role: ansible-role-kernel-configuration
+      vars:
+        kernel_parameters_common:
+          net.ipv4.tcp_syncookies: 1
+        kernel_parameters_major_map:
+          Ubuntu:
+            "22":
+              vm.swappiness: 10
+              net.core.somaxconn: 2048
+          RedHat:
+            "8":
+              fs.file-max: 200000

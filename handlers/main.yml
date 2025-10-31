@@ -1,0 +1,8 @@
+---
+
+- name: Reload sysctl
+  ansible.builtin.command: sysctl --system
+  changed_when: false
+  environment:
+    PATH: "{{ kernel_env_path }}"
+  when: kernel_reload_effective | default(kernel_parameters_reload)

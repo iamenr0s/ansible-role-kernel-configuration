@@ -1,0 +1,54 @@
+---
+
+# Default sysctl configuration file for persistence
+kernel_parameters_sysctl_file: "/etc/sysctl.d/99-kernel-parameters.conf"
+
+# Reload sysctl after applying changes
+kernel_parameters_reload: true
+
+# Skip reload inside containers (docker/podman) by default
+kernel_parameters_reload_in_containers: false
+
+# Whether to ignore errors when applying sysctl (use with caution)
+kernel_parameters_sysctl_ignoreerrors: false
+
+# PATH used when running sysctl commands to ensure executables are found
+kernel_env_path: "/usr/sbin:/sbin:{{ ansible_env.PATH | default('') }}"
+
+# Common parameters applied to all platforms unless overridden
+kernel_parameters_common: {}
+
+# Per-distribution and per-major-version kernel parameters
+kernel_parameters_major_map:
+  Ubuntu:
+    "20":
+      vm.swappiness: 10
+      net.core.somaxconn: 1024
+    "22":
+      vm.swappiness: 10
+      net.core.somaxconn: 2048
+  Debian:
+    "11":
+      vm.swappiness: 10
+    "12":
+      vm.swappiness: 5
+  RedHat:
+    "7":
+      fs.file-max: 100000
+    "8":
+      fs.file-max: 200000
+    "9":
+      fs.file-max: 200000
+  Rocky:
+    "8":
+      fs.file-max: 200000
+    "9":
+      fs.file-max: 200000
+  AlmaLinux:
+    "8":
+      fs.file-max: 200000
+    "9":
+      fs.file-max: 200000
+  Fedora:
+    "39":
+      vm.swappiness: 10
