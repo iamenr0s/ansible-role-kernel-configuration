@@ -71,9 +71,13 @@ kernel_modules_blacklist: []
 kernel_modules_options: {}
 
 # Persist module loading via system configuration when loading modules
-# If true, module entries and options are written under /etc/modules-load.d and /etc/modprobe.d
+# If true, module entries and options are written under
+# /etc/modules-load.d and /etc/modprobe.d
 kernel_modules_persistent: true
 
-# Files used for persisting blacklist and standalone options (when not using modprobe persistent)
-kernel_modules_blacklist_file: "/etc/modprobe.d/blacklist-ansible-role-kernel.conf"
-kernel_modules_options_file: "/etc/modprobe.d/ansible-role-kernel-options.conf"
+# Files used for persisting blacklist and standalone options
+# (when not using modprobe persistent)
+kernel_modules_blacklist_file: >-
+  /etc/modprobe.d/blacklist-ansible-role-kernel.conf
+kernel_modules_options_file: >-
+  /etc/modprobe.d/ansible-role-kernel-options.conf

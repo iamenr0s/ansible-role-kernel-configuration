@@ -51,8 +51,14 @@
   community.general.modprobe:
     name: "{{ item }}"
     state: present
-    params: "{{ (kernel_modules_options[item] | default({})) | items | map('join', '=') | join(' ') }}"
-    persistent: "{{ 'present' if kernel_modules_persistent else 'disabled' }}"
+    params: >-
+      {{ (kernel_modules_options[item] | default({}))
+         | items
+         | map('join', '=')
+         | join(' ')
+      }}
+    persistent: >-
+      {{ 'present' if kernel_modules_persistent else 'disabled' }}
   loop: "{{ kernel_modules_load }}"
   when: kernel_modules_load | length > 0
 
