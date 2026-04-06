@@ -32,18 +32,18 @@
          else kernel_parameters_reload }}
 
 - name: Apply kernel parameters via sysctl (persistent)
+  when: kernel_parameters_effective | length > 0 and not kernel_in_container
   ansible.posix.sysctl:
     name: "{{ item.key }}"
     value: "{{ item.value }}"
     state: present
     sysctl_file: "{{ kernel_parameters_sysctl_file }}"
     reload: "{{ kernel_reload_effective }}"
-    sysctl_set: "{{ not kernel_in_container }}"
+    sysctl_set: true
     ignoreerrors: "{{ kernel_parameters_sysctl_ignoreerrors }}"
   environment:
     PATH: "{{ kernel_env_path }}"
   loop: "{{ kernel_parameters_effective | dict2items }}"
-  when: kernel_parameters_effective | length > 0
   notify: Reload sysctl
 
 # Kernel modules management
