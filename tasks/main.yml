@@ -59,7 +59,9 @@
          | join(' ')
       }}
     persistent: >-
-      {{ 'present' if (kernel_modules_persistent and not kernel_in_container) else 'disabled' }}
+      {{ 'present'
+         if (kernel_modules_persistent and not kernel_in_container)
+         else 'disabled' }}
   loop: "{{ kernel_modules_load }}"
   when: kernel_modules_load | length > 0
   ignore_errors: "{{ kernel_in_container | bool }}"
