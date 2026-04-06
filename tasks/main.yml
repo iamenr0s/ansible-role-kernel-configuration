@@ -1,6 +1,14 @@
 ---
 
+- name: Detect container virtualization
+  ansible.builtin.set_fact:
+    kernel_in_container: >-
+      {{ (ansible_virtualization_type | default(''))
+         in ['docker', 'podman', 'container', 'containerd']
+         or (ansible_virtualization_role | default('')) == 'guest' }}
+
 - name: Ensure sysctl.d directory exists
+  when: not kernel_in_container
   ansible.builtin.file:
     path: /etc/sysctl.d
     state: directory
@@ -16,13 +24,6 @@
              recursive=True
            )
       }}
-
-- name: Detect container virtualization
-  ansible.builtin.set_fact:
-    kernel_in_container: >-
-      {{ (ansible_virtualization_type | default(''))
-         in ['docker', 'podman', 'container', 'containerd']
-         or (ansible_virtualization_role | default('')) == 'guest' }}
 
 - name: Determine reload behavior for this host
   ansible.builtin.set_fact:
@@ -58,9 +59,10 @@
          | join(' ')
       }}
     persistent: >-
-      {{ 'present' if kernel_modules_persistent else 'disabled' }}
+      {{ 'present' if (kernel_modules_persistent and not kernel_in_container) else 'disabled' }}
   loop: "{{ kernel_modules_load }}"
   when: kernel_modules_load | length > 0
+  ignore_errors: "{{ kernel_in_container | bool }}"
 
 - name: Blacklist kernel modules
   community.general.kernel_blacklist:
