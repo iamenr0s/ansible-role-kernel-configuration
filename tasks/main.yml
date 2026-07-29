@@ -3,9 +3,11 @@
 - name: Detect container virtualization
   ansible.builtin.set_fact:
     kernel_in_container: >-
-      {{ (ansible_virtualization_type | default(''))
+      {{ (ansible_facts['virtualization_type'] | default(''))
          in ['docker', 'podman', 'container', 'containerd']
-         or (ansible_virtualization_role | default('')) == 'guest' }}
+         or (ansible_facts['virtualization_role'] | default('')) == 'guest' }}
+  tags:
+    - kernel_configuration
 
 - name: Ensure sysctl.d directory exists
   when: not kernel_in_container
@@ -13,23 +15,29 @@
     path: /etc/sysctl.d
     state: directory
     mode: '0755'
+  tags:
+    - kernel_configuration
 
 - name: Determine effective kernel parameters for this host
   ansible.builtin.set_fact:
     kernel_parameters_effective: >-
       {{ (kernel_parameters_common | default({}))
          | combine(
-             (kernel_parameters_major_map[ansible_distribution][ansible_distribution_major_version]
+             (kernel_parameters_major_map[ansible_facts['distribution']][ansible_facts['distribution_major_version']]
               | default({})),
              recursive=True
            )
       }}
+  tags:
+    - kernel_configuration
 
 - name: Determine reload behavior for this host
   ansible.builtin.set_fact:
     kernel_reload_effective: >-
       {{ kernel_parameters_reload_in_containers if kernel_in_container
          else kernel_parameters_reload }}
+  tags:
+    - kernel_configuration
 
 - name: Apply kernel parameters via sysctl (persistent)
   when: kernel_parameters_effective | length > 0 and not kernel_in_container
@@ -45,6 +53,8 @@
     PATH: "{{ kernel_env_path }}"
   loop: "{{ kernel_parameters_effective | dict2items }}"
   notify: Reload sysctl
+  tags:
+    - kernel_configuration
 
 # Kernel modules management
 
@@ -64,7 +74,10 @@
          else 'disabled' }}
   loop: "{{ kernel_modules_load }}"
   when: kernel_modules_load | length > 0
-  ignore_errors: "{{ kernel_in_container | bool }}"
+  register: __kernel_modprobe_load_result
+  failed_when: __kernel_modprobe_load_result is failed and not kernel_in_container
+  tags:
+    - kernel_configuration
 
 - name: Blacklist kernel modules
   community.general.kernel_blacklist:
@@ -73,6 +86,8 @@
     blacklist_file: "{{ kernel_modules_blacklist_file }}"
   loop: "{{ kernel_modules_blacklist }}"
   when: kernel_modules_blacklist | length > 0
+  tags:
+    - kernel_configuration
 
 - name: Unload blacklisted modules if currently loaded
   community.general.modprobe:
@@ -80,3 +95,5 @@
     state: absent
   loop: "{{ kernel_modules_blacklist }}"
   when: kernel_modules_blacklist | length > 0
+  tags:
+    - kernel_configuration

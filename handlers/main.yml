@@ -6,3 +6,5 @@
   environment:
     PATH: "{{ kernel_env_path }}"
   when: kernel_reload_effective | default(kernel_parameters_reload)
+  tags:
+    - kernel_configuration

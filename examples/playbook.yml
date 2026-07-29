@@ -2,7 +2,8 @@
 # Example Playbook for kernel parameters role
 # Demonstrates configuring kernel parameters by major version
 
-- hosts: all
+- name: Apply kernel configuration example
+  hosts: all
   become: true
   roles:
     - role: iamenr0s.ansible_role_kernel_configuration
