@@ -1,38 +1,44 @@
-[![Molecule](https://github.com/iamenr0s/ansible-role-kernel-configuration/actions/workflows/molecule.yml/badge.svg)](https://github.com/iamenr0s/ansible-role-kernel-configuration/actions/workflows/molecule.yml) [![Release](https://github.com/iamenr0s/ansible-role-kernel-configuration/actions/workflows/release.yml/badge.svg)](https://github.com/iamenr0s/ansible-role-kernel-configuration/actions/workflows/release.yml) ![Ansible Role](https://img.shields.io/ansible/role/d/iamenr0s/ansible_role_upgrade) [![CodeFactor](https://www.codefactor.io/repository/github/iamenr0s/ansible-role-kernel-configuration/badge)](https://www.codefactor.io/repository/github/iamenr0s/ansible-role-kernel-configuration)
+[![Molecule](https://github.com/iamenr0s/ansible-role-kernel-configuration/actions/workflows/molecule.yml/badge.svg)](https://github.com/iamenr0s/ansible-role-kernel-configuration/actions/workflows/molecule.yml) ![Ansible Role](https://img.shields.io/ansible/role/d/iamenr0s/ansible_role_kernel_configuration) [![CodeFactor](https://www.codefactor.io/repository/github/iamenr0s/ansible-role-kernel-configuration/badge)](https://www.codefactor.io/repository/github/iamenr0s/ansible-role-kernel-configuration)
 
-# Ansible Role: Kernel Parameter Configuration
+Ansible Role: Kernel Parameter Configuration
+=============================================
 
-This role helps keep your Linux servers healthy and consistent by applying sensible kernel settings tailored to each supported OS version. It reduces guesswork, improves stability and performance, and makes changes easy to roll out and keep across reboots. Use it as a reliable baseline you can tweak to fit your environment.
+This role applies sensible kernel settings via `sysctl` tailored to each supported OS major version, and manages kernel modules (load, blacklist, options). It's container-aware: sysctl work is skipped automatically when the role detects it's running inside a container, so the same playbook is safe to run against both real hosts and containerized test/CI environments.
 
-## Features
+Features
+--------
+- Applies kernel parameters using `sysctl`, keyed by distro and major version.
+- Persists settings in `kernel_parameters_sysctl_file` and optionally reloads.
+- Skips sysctl work automatically inside containers (Docker/Podman) — no manual guard needed in your playbook.
+- Manages kernel modules: load/unload, persistent loading, blacklisting, and per-module options.
 
-- Applies kernel parameters using `sysctl` based on distro major version
-- Persists settings in `{{ kernel_parameters_sysctl_file }}` and optionally reloads
-- Clean defaults with per-platform overrides; easy to customize
-- Manages kernel modules: load/unload, persistent loading, blacklisting, and options
+Requirements
+------------
+- Python 3 available on the managed hosts (Ansible modules require Python).
+- Collections: `ansible.posix`, `community.general` (see `requirements.yml`).
+- Run with privilege escalation on real hosts: `become: true` is recommended.
 
-## Requirements
-
-- `ansible` >= 2.9
-- Collections: `ansible.posix`, `community.general >= 7.0.0`
-
-## Supported Platforms
-
-- Ubuntu 20.04, 22.04, 24.04
-- Debian 11, 12
-- RHEL 7, 8, 9
-- Rocky Linux 8, 9, 10
+Supported Platforms
+--------------------
 - AlmaLinux 8, 9, 10
-- Fedora 39+
+- Debian 12, 13
+- Fedora 42, 43, 44
+- Rocky Linux 8, 9, 10
+- Ubuntu 22.04, 24.04
 
-## Role Variables
+Role Variables
+---------------
+Defined in `defaults/main.yml` (mirrored in `meta/argument_specs.yml`):
 
-### Basic Configuration
+### Sysctl / kernel parameters
 
-- `kernel_parameters_sysctl_file`: Path to persistent sysctl file (default: `/etc/sysctl.d/99-kernel-parameters.conf`)
-- `kernel_parameters_reload`: Reload sysctl after changes (default: `true`)
-- `kernel_parameters_common`: Dict of parameters applied to all platforms
-- `kernel_parameters_major_map`: Nested dict mapping `distribution -> major_version -> {param: value}`
+- `kernel_parameters_sysctl_file` (str): Path to the persistent sysctl file (default: `/etc/sysctl.d/99-kernel-parameters.conf`).
+- `kernel_parameters_reload` (bool): Reload sysctl after applying changes (default: `true`).
+- `kernel_parameters_reload_in_containers` (bool): Reload behavior used when the host is detected as a container (default: `false`).
+- `kernel_parameters_sysctl_ignoreerrors` (bool): Ignore errors when applying sysctl parameters — use with caution (default: `false`).
+- `kernel_env_path` (str): `PATH` used when running sysctl commands (default: `/usr/sbin:/sbin:{{ ansible_env.PATH | default('') }}`).
+- `kernel_parameters_common` (dict): Parameters applied to all platforms unless overridden.
+- `kernel_parameters_major_map` (dict): Nested dict mapping `ansible_distribution -> ansible_distribution_major_version -> {param: value}`. A distro/version missing from this map still works — the role falls back to `{}` for that host.
 
 Example:
 
@@ -49,15 +55,18 @@ kernel_parameters_major_map:
   RedHat:
     "8":
       fs.file-max: 200000
+```
 
-### Kernel Modules
+### Kernel modules
 
-- `kernel_modules_load`: List of module names to load immediately and persist.
-- `kernel_modules_blacklist`: List of module names to blacklist (prevent loading).
-- `kernel_modules_options`: Map of module -> options dict applied when loading.
-- `kernel_modules_persistent`: If true, persist module load and options across reboots.
-- `kernel_modules_blacklist_file`: Path to blacklist file for persistence.
-- `kernel_modules_options_file`: Path for standalone options when needed.
+- `kernel_modules_load` (list): Module names to load immediately and persist (default: `[]`).
+- `kernel_modules_blacklist` (list): Module names to blacklist, preventing them from loading (default: `[]`).
+- `kernel_modules_options` (dict): Map of module name to an options dict applied when loading.
+- `kernel_modules_persistent` (bool): Persist module load/options across reboots (default: `true`).
+- `kernel_modules_load_conf_dir` (str): Directory used for persisting immediate module loads (default: `/etc/modules-load.d`).
+- `kernel_modules_modprobe_conf_dir` (str): Directory used for persisting module options/blacklists (default: `/etc/modprobe.d`).
+- `kernel_modules_blacklist_file` (str): File used to persist the module blacklist (default: `/etc/modprobe.d/blacklist-ansible-role-kernel.conf`).
+- `kernel_modules_options_file` (str): File used to persist standalone module options (default: `/etc/modprobe.d/ansible-role-kernel-options.conf`).
 
 Example:
 
@@ -76,14 +85,16 @@ kernel_modules_persistent: true
 Notes:
 - Options are applied when modules are loaded by this role.
 - Blacklisted modules are also unloaded if currently loaded.
-```
 
-## Dependencies
+Container Behavior
+-------------------
+The role detects containers via `ansible_virtualization_type`/`ansible_virtualization_role` and sets `kernel_in_container`. When true:
+- The sysctl directory is not created and no kernel parameters are applied (they usually can't be, and doing so can trigger a PAM/sudo failure under `become`).
+- Module loading (`modprobe`) errors are ignored rather than failing the play.
+- Module blacklisting still runs — it's just writing a config file, safe in any environment.
 
-None.
-
-## Example Playbook
-
+Example Playbook
+-----------------
 ```yaml
 - hosts: all
   become: true
@@ -106,33 +117,38 @@ None.
           - nouveau
 ```
 
-## Testing
+Contributing & Security
+-------------------------
+- Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+- Report vulnerabilities privately per [SECURITY.md](SECURITY.md); do not open public issues for them.
 
-- Use Molecule with Docker or Vagrant to validate parameter application across platforms.
+CI & Release (maintainers)
+----------------------------
+A single workflow (`.github/workflows/molecule.yml`) runs lint and the full Molecule distro matrix on pushes to `main`, PRs, and `v*` tags. On `v*` tags, a `release` job publishes to Ansible Galaxy after all tests pass.
 
-## Troubleshooting
+The Galaxy API key lives in the `galaxy` GitHub environment, which only `v*` tags may target. One-time setup:
 
-- Ensure `ansible_distribution` and `ansible_distribution_major_version` are detected correctly.
-- If parameters don’t persist, verify `kernel_parameters_sysctl_file` exists and is included by your system’s sysctl configuration.
+```bash
+# Galaxy publishing key (environment-scoped, get it from galaxy.ansible.com/ui/token)
+gh secret set GALAXY_API_KEY --env galaxy --repo iamenr0s/ansible-role-kernel-configuration
 
-## License
+# Code scanning notifications (Slack webhook URL; for Discord append /slack to the webhook URL)
+gh secret set SECURITY_ALERT_WEBHOOK --env galaxy --repo iamenr0s/ansible-role-kernel-configuration
+```
 
+`.github/workflows/code-scanning-notify.yml` polls the code-scanning API every 6 hours and posts new or updated open alerts to that webhook (GitHub Actions cannot trigger on `code_scanning_alert` directly).
+
+To release: tag a commit `vX.Y.Z` and push the tag — CI gates the Galaxy publish.
+
+Changelog
+---------
+See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
+
+License
+-------
 MIT
 
-## Author Information
-
+Author Information
+--------------------
 Author: iamenr0s
 Galaxy: `iamenr0s.ansible_role_kernel_configuration`
-
-## Contributing
-
-Contributions are welcome! Please:
-- Fork the repository
-- Create a feature branch
-- Make your changes
-- Add tests if applicable
-- Submit a pull request
-
-## Changelog
-
-See `CHANGELOG.md` for version history and release notes.
