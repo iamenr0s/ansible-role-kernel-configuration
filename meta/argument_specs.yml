@@ -1,0 +1,74 @@
+---
+
+argument_specs:
+  main:
+    short_description: >-
+      Applies kernel parameters via sysctl and manages kernel modules
+      (load/blacklist/options), tailored per distribution major version.
+    options:
+      kernel_parameters_sysctl_file:
+        description: Path to the persistent sysctl file the role writes parameters into.
+        type: str
+        default: "/etc/sysctl.d/99-kernel-parameters.conf"
+      kernel_parameters_reload:
+        description: Reload sysctl after applying changes.
+        type: bool
+        default: true
+      kernel_parameters_reload_in_containers:
+        description: Reload behavior to use when the host is detected as a container.
+        type: bool
+        default: false
+      kernel_parameters_sysctl_ignoreerrors:
+        description: Ignore errors when applying sysctl parameters (use with caution).
+        type: bool
+        default: false
+      kernel_env_path:
+        description: PATH used when running sysctl commands to ensure executables are found.
+        type: str
+        default: "/usr/sbin:/sbin:{{ ansible_env.PATH | default('') }}"
+      kernel_parameters_common:
+        description: Kernel parameters applied to all platforms unless overridden.
+        type: dict
+        default: {}
+      kernel_parameters_major_map:
+        description: >-
+          Per-distribution, per-major-version kernel parameters. Keyed by
+          ansible_distribution, then ansible_distribution_major_version.
+        type: dict
+        default: {}
+      kernel_modules_load_conf_dir:
+        description: Directory used for persisting immediate module loads.
+        type: str
+        default: "/etc/modules-load.d"
+      kernel_modules_modprobe_conf_dir:
+        description: Directory used for persisting module options and blacklists.
+        type: str
+        default: "/etc/modprobe.d"
+      kernel_modules_load:
+        description: Kernel modules to load immediately and persist across reboots.
+        type: list
+        elements: str
+        default: []
+      kernel_modules_blacklist:
+        description: Kernel modules to blacklist (prevent loading).
+        type: list
+        elements: str
+        default: []
+      kernel_modules_options:
+        description: Kernel module options, map of module name to a dict of option -> value.
+        type: dict
+        default: {}
+      kernel_modules_persistent:
+        description: >-
+          Persist module loading via system configuration when loading
+          modules (writes under kernel_modules_load_conf_dir/kernel_modules_modprobe_conf_dir).
+        type: bool
+        default: true
+      kernel_modules_blacklist_file:
+        description: File used for persisting the module blacklist.
+        type: str
+        default: "/etc/modprobe.d/blacklist-ansible-role-kernel.conf"
+      kernel_modules_options_file:
+        description: File used for persisting standalone module options.
+        type: str
+        default: "/etc/modprobe.d/ansible-role-kernel-options.conf"

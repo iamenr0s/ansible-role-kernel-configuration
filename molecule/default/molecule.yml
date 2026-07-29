@@ -9,7 +9,7 @@ driver:
   name: podman
 platforms:
   - name: instance
-    image: "iamenr0s/docker-${MOLECULE_DISTRO:-almalinux10}-ansible:latest"
+    image: "iamenr0s/docker-${MOLECULE_DISTRO:-almalinux9}-ansible:latest"
     command: ${MOLECULE_DOCKER_COMMAND:-""}
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
@@ -20,3 +20,4 @@ provisioner:
   name: ansible
   playbooks:
     converge: ${MOLECULE_PLAYBOOK:-converge.yml}
+    prepare: prepare.yml

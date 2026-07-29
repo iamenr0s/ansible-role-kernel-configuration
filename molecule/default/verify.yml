@@ -1,0 +1,55 @@
+---
+
+- name: Verify
+  hosts: all
+  gather_facts: true
+  become: false
+
+  vars_files:
+    - ../../defaults/main.yml
+
+  tasks:
+    # kernel_in_container is a role-local set_fact from the converge run; it
+    # doesn't survive into this separate ansible-playbook invocation, so
+    # recompute it the same way tasks/main.yml does.
+    - name: Verify | Recompute container detection
+      ansible.builtin.set_fact:
+        __verify_in_container: >-
+          {{ (ansible_facts['virtualization_type'] | default(''))
+             in ['docker', 'podman', 'container', 'containerd']
+             or (ansible_facts['virtualization_role'] | default('')) == 'guest' }}
+
+    - name: Verify | Assert the role is running inside a container under Molecule
+      ansible.builtin.assert:
+        that:
+          - __verify_in_container | bool
+        fail_msg: >-
+          Molecule runs the role inside a container; container detection
+          should have resolved true via ansible_virtualization_type/role.
+
+    - name: Verify | Check whether the persistent sysctl file was created
+      ansible.builtin.stat:
+        path: "{{ kernel_parameters_sysctl_file }}"
+      register: __verify_sysctl_file
+
+    - name: Verify | Assert the sysctl file was not written inside the container
+      ansible.builtin.assert:
+        that:
+          - not __verify_sysctl_file.stat.exists
+        fail_msg: >-
+          {{ kernel_parameters_sysctl_file }} should not be created when
+          kernel_in_container is true — the role's container guard should
+          have skipped that task.
+
+    - name: Verify | Check whether the module blacklist file was created
+      ansible.builtin.stat:
+        path: "{{ kernel_modules_blacklist_file }}"
+      register: __verify_blacklist_file
+
+    - name: Verify | Assert no blacklist file was written with the default empty list
+      ansible.builtin.assert:
+        that:
+          - not __verify_blacklist_file.stat.exists
+        fail_msg: >-
+          {{ kernel_modules_blacklist_file }} should not be created when
+          kernel_modules_blacklist is empty (the role's default).
