@@ -140,15 +140,23 @@ gh secret set SECURITY_ALERT_WEBHOOK --env galaxy --repo iamenr0s/ansible-role-k
 
 To release: tag a commit `vX.Y.Z` and push the tag — CI gates the Galaxy publish.
 
-Changelog
----------
-See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
+## Contributing
 
-License
--------
-MIT
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the
+local pipeline commands and pull request checklist. This project follows the
+[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 
-Author Information
---------------------
+## Security
+
+See [SECURITY.md](SECURITY.md) — GitHub private vulnerability reporting, no
+public issues for security bugs.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+## Author Information
+
 Author: iamenr0s
+
 Galaxy: `iamenr0s.ansible_role_kernel_configuration`
